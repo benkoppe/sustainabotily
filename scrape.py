@@ -12,9 +12,13 @@ OUTPUT_DIR = "crawl_output"
 
 
 def safe_filename(url: str) -> str:
-    """Generate a clean, unique filename for each URL."""
+    """Generate a clean, unique, short filename for each URL."""
     h = hashlib.md5(url.encode("utf-8")).hexdigest()[:8]
+    # Strip protocol and sanitize
     name = url.replace("https://", "").replace("http://", "").replace("/", "_")
+    # Truncate to stay under 200 chars (255 is FS limit, keep buffer)
+    if len(name) > 200:
+        name = name[:200]
     return f"{name}_{h}.md"
 
 
