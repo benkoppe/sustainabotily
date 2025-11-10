@@ -10,7 +10,7 @@ from llama_index.core import (
 )
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.core.agent.workflow import FunctionAgent
-from llama_index.llms.openai import OpenAI
+from llama_index.llms.openrouter import OpenRouter
 
 DATA_DIR = Path("./crawl_output/")
 STORAGE_DIR = Path("./storage/")
@@ -46,9 +46,31 @@ async def main():
     os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY") or input(
         "Enter your OpenAI API Key: "
     )
+    os.environ["OPENROUTER_API_KEY"] = os.getenv("OPENROUTER_API_KEY") or input(
+        "Enter your OpenRouter API Key: "
+    )
 
     index = await build_index()
-    print(index)
+
+    query_engine_tool = QueryEngineTool(
+        query_engine=index.as_query_engine(),
+        metadata=ToolMetadata(
+            name="sustainability_markdown_query_engine",
+            description="Answer questions about Cornell Sustainability using this comprehensive markdown files directory",
+        ),
+    )
+
+    agent = FunctionAgent(
+        tools=[query_engine_tool], llm=OpenRouter(model="minimax/minimax-m2:free")
+    )
+
+    print("\nChatbot ready. Type 'exit' to quit.\n")
+    while True:
+        query = input("User: ").strip()
+        if query.lower() in {"exit", "quit"}:
+            break
+        response = await agent.run(query)
+        print("Agent:", response, "\n")
 
 
 if __name__ == "__main__":
