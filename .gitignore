@@ -219,3 +219,6 @@ devenv.local.yaml
 
 # Crawl output
 crawl_output
+
+# macos
+**/.DS_Store
