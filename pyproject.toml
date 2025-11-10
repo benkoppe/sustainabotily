@@ -4,4 +4,10 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = ["asyncio>=4.0.0", "crawl4ai>=0.7.6", "playwright==1.54.0"]
+dependencies = [
+    "asyncio>=4.0.0",
+    "crawl4ai>=0.7.6",
+    "llama-index>=0.14.7",
+    "nest-asyncio>=1.6.0",
+    "playwright==1.54.0",
+]
