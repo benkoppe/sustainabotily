@@ -222,3 +222,6 @@ crawl_output
 
 # macos
 **/.DS_Store
+
+# Vector store
+storage

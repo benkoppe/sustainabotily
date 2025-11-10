@@ -43,6 +43,10 @@ async def build_index(force_rebuild: bool = False):
 
 
 async def main():
+    os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY") or input(
+        "Enter your OpenAI API Key: "
+    )
+
     index = await build_index()
     print(index)
 
