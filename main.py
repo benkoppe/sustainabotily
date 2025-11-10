@@ -1,16 +1,20 @@
 import os
 from pathlib import Path
 import asyncio
+from dotenv import load_dotenv
 from llama_index.readers.file import MarkdownReader
 from llama_index.core import (
     VectorStoreIndex,
     StorageContext,
     Settings,
     load_index_from_storage,
+    PromptTemplate
 )
-from llama_index.core.tools import QueryEngineTool, ToolMetadata
-from llama_index.core.agent.workflow import FunctionAgent
-from llama_index.llms.openrouter import OpenRouter
+from llama_index.llms.groq import Groq
+from llama_index.embeddings.ollama import OllamaEmbedding
+
+# Load environment variables
+load_dotenv()
 
 DATA_DIR = Path("./crawl_output/")
 STORAGE_DIR = Path("./storage/")
@@ -38,39 +42,71 @@ async def build_index(force_rebuild: bool = False):
     storage_context = StorageContext.from_defaults()
     index = VectorStoreIndex.from_documents(all_docs, storage_context=storage_context)
     storage_context.persist(persist_dir=str(STORAGE_DIR))
-    print(f"Index build and saved to {STORAGE_DIR}")
+    print(f"Index built and saved to {STORAGE_DIR}")
     return index
 
 
 async def main():
-    os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY") or input(
-        "Enter your OpenAI API Key: "
-    )
-    os.environ["OPENROUTER_API_KEY"] = os.getenv("OPENROUTER_API_KEY") or input(
-        "Enter your OpenRouter API Key: "
-    )
-
+    Settings.embed_model = OllamaEmbedding(model_name="nomic-embed-text")
+    
+    print("Loading index...")
     index = await build_index()
 
-    query_engine_tool = QueryEngineTool(
-        query_engine=index.as_query_engine(),
-        metadata=ToolMetadata(
-            name="sustainability_markdown_query_engine",
-            description="Answer questions about Cornell Sustainability using this comprehensive markdown files directory",
-        ),
+    custom_prompt = PromptTemplate(
+        "You are an expert on the Cornell Sustainability Office (CSO). Strictly using the context below, answer the question clearly. NEVER guess or infer information.\n\n"
+        "Context:\n{context_str}\n\n"
+        "Question:\n{query_str}\n\n"
+        "Answer:"
     )
 
-    agent = FunctionAgent(
-        tools=[query_engine_tool], llm=OpenRouter(model="minimax/minimax-m2:free")
+    query_engine = index.as_query_engine(
+        llm = Groq(
+                model="llama-3.1-8b-instant",
+                api_key=os.getenv("GROQ_API_KEY")
+            ),
+        similarity_top_k=5,
+        text_qa_template=custom_prompt
     )
 
-    print("\nChatbot ready. Type 'exit' to quit.\n")
+    print("""=====  BEFORE YOU BEGIN CHATTING... =====
+Regarding AI energy usage, there is often a focus on the energy used in model 
+training. Today, however, inference - not training - represents an increasing 
+majority of AI energy demands, with estimates suggesting 80 to 90 percent of 
+computing power for AI is used for inference. 
+
+With every query, an AI chatbot consumes a certain amount of electricity, water, 
+and carbon. Model size plays a massive role with respect to this energy consumption! 
+Thus, our chatbot intentionally uses a smaller, energy-efficient model (LLaMA 3.1 8B), 
+where each query is approximately equivalent to running a microwave for a tenth 
+of a second.
+
+While using a lightweight model can reduce the environmental footprint of our 
+chatbot, and the impact of a single query appears low, it is still important 
+to see the bigger picture on the environmental cost that AI carries. 
+          
+For more information, visit the following link: <insert link>
+=========================================""")
+    print("(Type 'exit' or 'quit' to close chat.)\n")
+    count = 0
+    energy_use = 0
     while True:
         query = input("User: ").strip()
         if query.lower() in {"exit", "quit"}:
             break
-        response = await agent.run(query)
-        print("Agent:", response, "\n")
+        
+        try:
+            print("Processing...")
+            response = await query_engine.aquery(query)
+            print(f"Agent: {response}\n")
+
+            count = count + 1
+            energy_use = energy_use + 0.1
+            if (count == 1):
+                print(f"Note: You have made {count} query, equivalent to microwaving food for {energy_use} seconds.\n")
+            else:
+                print(f"Note: You have made {count} queries, equivalent to microwaving food for {energy_use} seconds.\n")
+        except Exception as e:
+            print(f"Error: {e}\n")
 
 
 if __name__ == "__main__":

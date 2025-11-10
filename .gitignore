@@ -225,3 +225,5 @@ crawl_output
 
 # Vector store
 storage
+
+.env
