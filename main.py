@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import asyncio
 from dotenv import load_dotenv
+from llama_index.core.chat_engine.types import BaseChatEngine
 from llama_index.readers.file import MarkdownReader
 from llama_index.core import (
     VectorStoreIndex,
@@ -12,6 +13,7 @@ from llama_index.core import (
 )
 from llama_index.llms.groq import Groq
 from llama_index.embeddings.ollama import OllamaEmbedding
+from llama_index.core.memory import ChatMemoryBuffer
 
 # Load environment variables
 load_dotenv()
@@ -20,7 +22,7 @@ DATA_DIR = Path("./crawl_output/")
 STORAGE_DIR = Path("./storage/")
 
 
-async def build_index(force_rebuild: bool = False):
+def build_index(force_rebuild: bool = False):
     if STORAGE_DIR.exists() and not force_rebuild:
         print("Loading existing index from storage...")
         storage_context = StorageContext.from_defaults(persist_dir=str(STORAGE_DIR))
@@ -46,25 +48,30 @@ async def build_index(force_rebuild: bool = False):
     return index
 
 
-async def main():
-    Settings.embed_model = OllamaEmbedding(model_name="nomic-embed-text")
+def build_chat_engine(index, token_limit=1500) -> BaseChatEngine:
+    memory = ChatMemoryBuffer.from_defaults(token_limit=token_limit)
 
-    print("Loading index...")
-    index = await build_index()
-
-    custom_prompt = PromptTemplate(
-        "You are an expert on the Cornell Sustainability Office (CSO). Strictly using the context below, answer the question clearly. NEVER guess or infer information.\n\n"
-        "Context:\n{context_str}\n\n"
-        "Question:\n{query_str}\n\n"
-        "Answer:"
-    )
-
-    query_engine = index.as_query_engine(
+    chat_engine = index.as_chat_engine(
         llm=Groq(model="llama-3.1-8b-instant", api_key=os.getenv("GROQ_API_KEY")),
         similarity_top_k=5,
-        text_qa_template=custom_prompt,
+        memory=memory,
+        system_prompt="""
+            You are an expert on the Cornell Sustainability Office (CSO).
+            Strictly using your given context regarding the CSO, answer the question clearly.
+            NEVER guess or infer information. All information must come from the provided context.
+        """,
+        context_prompt=PromptTemplate(
+            "You are able to have normal conversations, as well as provide information, about the Cornell Sustainability Office (CSO).",
+            "Here are the relevant documents for the context:\n"
+            "{context_str}"
+            "\nInstruction: Use the previous chat history, or the context above, to interact and help the user.",
+        ),
     )
 
+    return chat_engine
+
+
+def do_chat_repl(chat_engine: BaseChatEngine):
     print(
         """=====  BEFORE YOU BEGIN CHATTING... =====
 Regarding AI energy usage, there is often a focus on the energy used in model 
@@ -95,7 +102,7 @@ For more information, visit the following link: <insert link>
 
         try:
             print("Processing...")
-            response = await query_engine.aquery(query)
+            response = query_engine.chat(query)
             print(f"Agent: {response}\n")
 
             count = count + 1
@@ -112,6 +119,16 @@ For more information, visit the following link: <insert link>
             print(f"Error: {e}\n")
 
 
+async def main():
+    Settings.embed_model = OllamaEmbedding(model_name="nomic-embed-text")
+
+    print("Loading index...")
+    index = build_index()
+
+    chat_engine = build_chat_engine(index)
+
+    do_chat_repl(chat_engine)
+
+
 if __name__ == "__main__":
     asyncio.run(main())
-
