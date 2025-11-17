@@ -18,7 +18,14 @@ def chatbot():
     model_name = st.selectbox("Model", model_options, index=st.session_state.model_idx)
     st.session_state.model_idx = model_options.index(model_name)
 
-    chat_engine = build_chat_engine(index(), model=model_name)
+    if (
+        "chat_engine" not in st.session_state
+        or st.session_state.model_idx != model_options.index(model_name)
+    ):
+        st.session_state.chat_engine = build_chat_engine(index(), model=model_name)
+        st.session_state.model_idx = model_options.index(model_name)
+
+    chat_engine = st.session_state.chat_engine
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
