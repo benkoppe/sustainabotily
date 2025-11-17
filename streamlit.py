@@ -16,14 +16,13 @@ def chatbot():
         st.session_state.model_name = model_options[0]
 
     model_name = st.text_input("Model", value=st.session_state.model_name)
-    st.session_state.model_name = model_name
 
     if (
         "chat_engine" not in st.session_state
-        or st.session_state.model_idx != model_options.index(model_name)
+        or st.session_state.model_name != model_name
     ):
         st.session_state.chat_engine = build_chat_engine(index(), model=model_name)
-        st.session_state.model_idx = model_options.index(model_name)
+        st.session_state.model_name = model_name
 
     chat_engine = st.session_state.chat_engine
 
