@@ -20,6 +20,7 @@ in
   # https://devenv.sh/packages/
   packages = with pkgs; [
     just
+    ollama
   ];
 
   dotenv.disableHint = true;
