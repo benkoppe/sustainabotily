@@ -8,7 +8,7 @@ from llama_index.core import (
     StorageContext,
     Settings,
     load_index_from_storage,
-    PromptTemplate
+    PromptTemplate,
 )
 from llama_index.llms.groq import Groq
 from llama_index.embeddings.ollama import OllamaEmbedding
@@ -48,7 +48,7 @@ async def build_index(force_rebuild: bool = False):
 
 async def main():
     Settings.embed_model = OllamaEmbedding(model_name="nomic-embed-text")
-    
+
     print("Loading index...")
     index = await build_index()
 
@@ -60,15 +60,13 @@ async def main():
     )
 
     query_engine = index.as_query_engine(
-        llm = Groq(
-                model="llama-3.1-8b-instant",
-                api_key=os.getenv("GROQ_API_KEY")
-            ),
+        llm=Groq(model="llama-3.1-8b-instant", api_key=os.getenv("GROQ_API_KEY")),
         similarity_top_k=5,
-        text_qa_template=custom_prompt
+        text_qa_template=custom_prompt,
     )
 
-    print("""=====  BEFORE YOU BEGIN CHATTING... =====
+    print(
+        """=====  BEFORE YOU BEGIN CHATTING... =====
 Regarding AI energy usage, there is often a focus on the energy used in model 
 training. Today, however, inference - not training - represents an increasing 
 majority of AI energy demands, with estimates suggesting 80 to 90 percent of 
@@ -85,7 +83,8 @@ chatbot, and the impact of a single query appears low, it is still important
 to see the bigger picture on the environmental cost that AI carries. 
           
 For more information, visit the following link: <insert link>
-=========================================""")
+========================================="""
+    )
     print("(Type 'exit' or 'quit' to close chat.)\n")
     count = 0
     energy_use = 0
@@ -93,7 +92,7 @@ For more information, visit the following link: <insert link>
         query = input("User: ").strip()
         if query.lower() in {"exit", "quit"}:
             break
-        
+
         try:
             print("Processing...")
             response = await query_engine.aquery(query)
@@ -101,13 +100,18 @@ For more information, visit the following link: <insert link>
 
             count = count + 1
             energy_use = energy_use + 0.1
-            if (count == 1):
-                print(f"Note: You have made {count} query, equivalent to microwaving food for {energy_use} seconds.\n")
+            if count == 1:
+                print(
+                    f"Note: You have made {count} query, equivalent to microwaving food for {energy_use} seconds.\n"
+                )
             else:
-                print(f"Note: You have made {count} queries, equivalent to microwaving food for {energy_use} seconds.\n")
+                print(
+                    f"Note: You have made {count} queries, equivalent to microwaving food for {energy_use} seconds.\n"
+                )
         except Exception as e:
             print(f"Error: {e}\n")
 
 
 if __name__ == "__main__":
     asyncio.run(main())
+
