@@ -8,6 +8,14 @@ def index():
     return build_index()
 
 
+def energy_message(count: int):
+    energy_use = round(count * 0.1, 2)
+    query_text = "query" if count == 1 else "queries"
+    st.caption(
+        f"You have made {count} {query_text}, equivalent to microwaving food for {energy_use} seconds.\n"
+    )
+
+
 def chatbot():
     st.title("Chat With Sustainability")
 
@@ -32,9 +40,13 @@ def chatbot():
     if st.button("Clear"):
         st.session_state.messages = []
 
+    assistant_count = 0
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
+            if message["role"] == "assistant":
+                assistant_count += 1
+                energy_message(assistant_count)
 
     if prompt := st.chat_input("Type your message here"):
         with st.chat_message("user"):
@@ -44,6 +56,7 @@ def chatbot():
         with st.chat_message("assistant"):
             stream = chat_engine.stream_chat(prompt)
             response = st.write_stream(stream.response_gen)
+            energy_message(assistant_count + 1)
 
         st.session_state.messages.append({"role": "assistant", "content": response})
 
