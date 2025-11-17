@@ -12,7 +12,7 @@ def chatbot():
     st.title("Chat With Sustainability")
 
     model_options = ["llama-3.1-8b-instant"]
-    if "model_idx" not in st.session_state:
+    if "model_name" not in st.session_state:
         st.session_state.model_name = model_options[0]
 
     model_name = st.text_input("Model", value=st.session_state.model_name)
