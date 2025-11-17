@@ -59,17 +59,12 @@ def build_chat_engine(
         llm=Groq(model=model, api_key=os.getenv("GROQ_API_KEY")),
         similarity_top_k=5,
         memory=memory,
+        chat_mode="context",
         system_prompt="""
             You are an expert on the Cornell Sustainability Office (CSO).
             Strictly using your given context regarding the CSO, answer the question clearly.
             NEVER guess or infer information. All information must come from the provided context.
         """,
-        context_prompt=PromptTemplate(
-            "You are able to have normal conversations, as well as provide information, about the Cornell Sustainability Office (CSO).",
-            "Here are the relevant documents for the context:\n"
-            "{context_str}"
-            "\nInstruction: Use the previous chat history, or the context above, to interact and help the user.",
-        ),
     )
 
     return chat_engine
