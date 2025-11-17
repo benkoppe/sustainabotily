@@ -13,10 +13,10 @@ def chatbot():
 
     model_options = ["llama-3.1-8b-instant"]
     if "model_idx" not in st.session_state:
-        st.session_state.model_idx = 0
+        st.session_state.model_name = model_options[0]
 
-    model_name = st.selectbox("Model", model_options, index=st.session_state.model_idx)
-    st.session_state.model_idx = model_options.index(model_name)
+    model_name = st.text_input("Model", value=st.session_state.model_name)
+    st.session_state.model_name = model_name
 
     if (
         "chat_engine" not in st.session_state
