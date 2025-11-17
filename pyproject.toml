@@ -13,5 +13,6 @@ dependencies = [
     "llama-index-llms-openrouter>=0.4.2",
     "nest-asyncio>=1.6.0",
     "playwright==1.54.0",
+    "streamlit>=1.51.0",
     "torch>=2.9.0",
 ]
