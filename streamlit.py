@@ -2,6 +2,8 @@ import streamlit as st
 
 from main import build_index, build_chat_engine
 
+IMPACT_DOCUMENT_LINK = "https://docs.google.com/document/d/19YTAi7l2OzadvUeBm_xfWLBbcm8HaTZb7XBlbVV7LoU/edit?usp=sharing"
+
 
 @st.cache_resource
 def index():
@@ -22,6 +24,28 @@ def chatbot():
     model_options = ["llama-3.1-8b-instant"]
     if "model_name" not in st.session_state:
         st.session_state.model_name = model_options[0]
+
+    with st.expander("BEFORE YOU BEGIN CHATTING...", expanded=True):
+        st.caption(
+            f"""
+            Regarding AI energy usage, there is often a focus on the energy used in model 
+            training. Today, however, inference - not training - represents an increasing 
+            majority of AI energy demands, with estimates suggesting 80 to 90 percent of 
+            computing power for AI is used for inference. 
+
+            With every query, an AI chatbot consumes a certain amount of electricity, water, 
+            and carbon. Model size plays a massive role with respect to this energy consumption! 
+            Thus, our chatbot intentionally uses a smaller, energy-efficient model (LLaMA 3.1 8B), 
+            where each query is approximately equivalent to running a microwave for a tenth 
+            of a second.
+
+            While using a lightweight model can reduce the environmental footprint of our 
+            chatbot, and the impact of a single query appears low, it is still important 
+            to see the bigger picture on the environmental cost that AI carries. 
+                    
+            For more information, please visit the following [document]({IMPACT_DOCUMENT_LINK}).
+        """
+        )
 
     model_name = st.text_input("Model", value=st.session_state.model_name)
 
