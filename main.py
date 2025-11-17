@@ -21,6 +21,8 @@ load_dotenv()
 DATA_DIR = Path("./crawl_output/")
 STORAGE_DIR = Path("./storage/")
 
+Settings.embed_model = OllamaEmbedding(model_name="nomic-embed-text")
+
 
 def build_index(force_rebuild: bool = False):
     if STORAGE_DIR.exists() and not force_rebuild:
@@ -48,11 +50,13 @@ def build_index(force_rebuild: bool = False):
     return index
 
 
-def build_chat_engine(index, token_limit=1500) -> BaseChatEngine:
+def build_chat_engine(
+    index, model="llama-3.1-8b-instant", token_limit=1500
+) -> BaseChatEngine:
     memory = ChatMemoryBuffer.from_defaults(token_limit=token_limit)
 
     chat_engine = index.as_chat_engine(
-        llm=Groq(model="llama-3.1-8b-instant", api_key=os.getenv("GROQ_API_KEY")),
+        llm=Groq(model=model, api_key=os.getenv("GROQ_API_KEY")),
         similarity_top_k=5,
         memory=memory,
         system_prompt="""
@@ -120,8 +124,6 @@ For more information, visit the following link: <insert link>
 
 
 async def main():
-    Settings.embed_model = OllamaEmbedding(model_name="nomic-embed-text")
-
     print("Loading index...")
     index = build_index()
 
