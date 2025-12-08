@@ -51,6 +51,11 @@ def chatbot():
             negligible even. However, it is important to zoom out and see the 
             bigger picture.
 
+            First of all, our use of LLaMA 3.1 8B dramatically decreases the energy used. 
+            If we were to use OpenAI's complex reasoning model o3, which has billions
+            of parameters, one query would be equivalent to running a microwave for
+            76 seconds, which is more than 700x higher than that for LLaMA 3.1 8B!
+
             Large language models, such as ChatGPT and Claude, serve tens of millions 
             of people every day. As of November 2025, ChatGPT alone sees roughly 120 
             million users daily. If we were to scale your energy use by that number, 

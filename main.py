@@ -65,7 +65,7 @@ def build_chat_engine(
 
             Strictly using your given context regarding the CSO, answer the question clearly.
             NEVER guess or infer information, i.e. be upfront if you cannot answer a question. 
-            All information must come from the provided context.
+            All information must come from the provided context or memory/chat history.
 
             If the user greets you, simply greet them back and briefly introduce yourself.
 
