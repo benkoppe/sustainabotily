@@ -5,60 +5,31 @@ from main import build_index, build_chat_engine
 
 IMPACT_DOCUMENT_LINK = "https://docs.google.com/document/d/19YTAi7l2OzadvUeBm_xfWLBbcm8HaTZb7XBlbVV7LoU/edit?usp=sharing"
 
-# Energy comparison metrics - each equivalent to ~0.1 second of microwave usage
+# Energy comparison metrics - each equivalent to around 0.03 Wh
 ENERGY_COMPARISONS = [
-    {"emoji": "🍕", "template": "microwaving food for {value} seconds", "factor": 0.1},
     {
-        "emoji": "🔦",
-        "template": "running an LED bulb for {value} seconds",
-        "factor": 1.5,
+        "emoji": "🍕", 
+        "template": "microwaving food for {value} seconds", 
+        "factor": 0.1},
+    {
+        "emoji": "💡",
+        "template": "powering a 60W light bulb for {value} seconds",
+        "factor": 1.7,
+    },
+    {
+        "emoji": "🚲", 
+        "template": "powering an e-bike for {value} feet", 
+        "factor": 6},
+    {
+        "emoji": "🔍", 
+        "template": "making {value} Google searches", 
+        "factor": 0.1
     },
     {
         "emoji": "📱",
         "template": "charging a smartphone for {value} seconds",
-        "factor": 0.08,
-    },
-    {
-        "emoji": "💡",
-        "template": "running an incandescent bulb for {value} seconds",
-        "factor": 0.25,
-    },
-    {
-        "emoji": "🌳",
-        "template": "what a small plant absorbs in {value} seconds of sunlight",
-        "factor": 15,
-    },
-    {"emoji": "🚲", "template": "powering an e-bike for {value} meters", "factor": 0.5},
-    {"emoji": "☕", "template": "heating {value}ml of water by 1°C", "factor": 1.0},
-    {
-        "emoji": "🧠",
-        "template": "your brain operating for {value} second",
-        "factor": 1.0,
-    },
-    {"emoji": "🎵", "template": "streaming music for {value} seconds", "factor": 0.3},
-    {
-        "emoji": "📺",
-        "template": "running a modern TV for {value} seconds",
-        "factor": 0.15,
-    },
-    {"emoji": "⚡", "template": "powering a laptop for {value} seconds", "factor": 0.1},
-    {
-        "emoji": "🏃",
-        "template": "energy burned taking {value} steps while walking",
-        "factor": 0.15,
-    },
-    {"emoji": "💾", "template": "writing to an SSD {value} times", "factor": 1000},
-    {
-        "emoji": "🎮",
-        "template": "running a gaming console (idle) for {value} seconds",
-        "factor": 0.12,
-    },
-    {"emoji": "📧", "template": "sending {value} emails", "factor": 15},
-    {
-        "emoji": "🌡️",
-        "template": "running a smart thermostat for {value} seconds",
-        "factor": 5,
-    },
+        "factor": 22.8
+    }
 ]
 
 
@@ -85,6 +56,31 @@ def energy_message(count: int, comparison_index: int):
     )
 
 
+def sidebar_analogy_text(latest_comparison, scaled_query_count):
+    """
+    Convert the scaled number of queries into the same metric the user sees
+    in the main UI — using the metric's template AND scientific notation.
+    """
+    if not latest_comparison:
+        return None
+
+    factor = latest_comparison["factor"]
+
+    # Compute the scaled value like the main metric does
+    raw_value = scaled_query_count * factor
+
+    # Format in scientific notation for readability
+    sci_value = f"{raw_value:.2e}"
+    mantissa, exponent = sci_value.split("e")
+    exponent = int(exponent)
+    formatted_value = f"{mantissa}×10^{exponent}"
+
+    # Apply the template
+    analogy_text = latest_comparison["template"].format(value=formatted_value)
+
+    return analogy_text
+
+
 def chatbot():
     st.title("Chat With Sustainability")
 
@@ -92,29 +88,31 @@ def chatbot():
     if "model_name" not in st.session_state:
         st.session_state.model_name = model_options[0]
 
-    # Initialize energy_use in session state
-    if "energy_use" not in st.session_state:
-        st.session_state.energy_use = 0
+    # Initialize query_count
+    if "query_count" not in st.session_state:
+        st.session_state.query_count = 0
 
     # Initialize comparison_metrics list to store which comparison was used for each query
     if "comparison_metrics" not in st.session_state:
         st.session_state.comparison_metrics = []
 
-    with st.sidebar:
-        # Calculate scaled energy use from session state
-        scaled_energy = st.session_state.energy_use * 120_000_000
+    if st.session_state.comparison_metrics:
+        latest_index = st.session_state.comparison_metrics[-1]
+        latest_comparison = ENERGY_COMPARISONS[latest_index]
+    else:
+        latest_comparison = None
 
-        if scaled_energy < 60:
-            time_str = f"{scaled_energy:.1f} seconds"
-        elif scaled_energy < 3600:
-            minutes = scaled_energy / 60
-            time_str = f"{minutes:.1f} minutes"
-        elif scaled_energy < 86400:
-            hours = scaled_energy / 3600
-            time_str = f"{hours:.1f} hours"
+    with st.sidebar:
+        if st.session_state.comparison_metrics:
+            latest_index = st.session_state.comparison_metrics[-1]
+            latest_comparison = ENERGY_COMPARISONS[latest_index]
         else:
-            days = scaled_energy / 86400
-            time_str = f"{days:.1f} days"
+            latest_comparison = None
+
+        # Calculate scaled query count 
+        scaled_query_count = st.session_state.query_count * 120_000_000
+
+        dynamic_analogy = sidebar_analogy_text(latest_comparison, scaled_query_count)
 
         st.title("FOOD FOR THOUGHT...")
         st.write(
@@ -123,18 +121,15 @@ def chatbot():
             negligible even. However, it is important to zoom out and see the 
             bigger picture.
 
-            First of all, our use of LLaMA 3.1 8B dramatically decreases the energy used. 
-            If we were to use OpenAI's complex reasoning model o3, which has billions
-            of parameters, one query would be equivalent to running a microwave for
-            76 seconds, which is more than 700x higher than that for LLaMA 3.1 8B!
+            First of all, our use of LLaMA 3.1 8B (a SLM with below 10B parameters) 
+            dramatically decreases the energy used. If we were to use OpenAI's complex 
+            reasoning model o3, which has billions of parameters, one query requires 
+            around 21 Wh of energy, 700x higher than that required by LLaMA 3.1 8B!
 
-            Large language models, such as ChatGPT and Claude, serve tens of millions 
+            Additionally, large language models, such as ChatGPT and Claude, serve tens of millions 
             of people every day. As of November 2025, ChatGPT alone sees roughly 120 
             million users daily. If we were to scale your energy use by that number, 
-            it would be equivalent to running a microwave for **{time_str}**! 
-
-            (By then, whatever you were heating up would have progressed well past well-done, 
-            likely turning into smoldering, charred black mass…)
+            it would be equivalent to **{dynamic_analogy}**!
             """
         )
 
@@ -146,11 +141,11 @@ def chatbot():
             majority of AI energy demands, with estimates suggesting 80 to 90 percent of 
             computing power for AI is used for inference. 
 
-            With every query, an AI chatbot consumes a certain amount of electricity, water, 
-            and carbon. Model size plays a massive role with respect to this energy consumption! 
+            With every query, an AI chatbot consumes electricity and water while also generating
+            carbon emissions. Model size plays a massive role with respect to this energy consumption! 
             Thus, our chatbot intentionally uses a smaller, energy-efficient model (LLaMA 3.1 8B), 
-            where each query is approximately equivalent to running a microwave for a tenth 
-            of a second.
+            where each query requires around 0.03 Wh of energy. This is approximately 
+            equivalent to running a microwave for 0.1 seconds, or riding an e-bike for 6 ft.
 
             While using a lightweight model can reduce the environmental footprint of our 
             chatbot, and the impact of a single query appears low, it is still important 
@@ -176,21 +171,19 @@ def chatbot():
 
     if st.button("Clear"):
         st.session_state.messages = []
-        st.session_state.energy_use = 0
+        st.session_state.query_count = 0
         st.session_state.comparison_metrics = []
         st.rerun()
 
-    assistant_count = 0
+    assistant_index = 0
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
+
             if message["role"] == "assistant":
-                assistant_count += 1
-                # Use the stored comparison index for this query
-                comparison_index = st.session_state.comparison_metrics[
-                    assistant_count - 1
-                ]
-                energy_message(assistant_count, comparison_index)
+                comparison_index = st.session_state.comparison_metrics[assistant_index]
+                energy_message(assistant_index + 1, comparison_index)
+                assistant_index += 1
 
     if prompt := st.chat_input("Type your message here"):
         with st.chat_message("user"):
@@ -201,15 +194,13 @@ def chatbot():
             stream = chat_engine.stream_chat(prompt)
             response = st.write_stream(stream.response_gen)
 
-            # Update energy use in session state
-            assistant_count += 1
-            st.session_state.energy_use = round(assistant_count * 0.1, 2)
+            st.session_state.query_count += 1
 
             # Randomly select a comparison metric and store it
             comparison_index = random.randint(0, len(ENERGY_COMPARISONS) - 1)
             st.session_state.comparison_metrics.append(comparison_index)
 
-            energy_message(assistant_count, comparison_index)
+            energy_message(st.session_state.query_count, comparison_index)
 
         st.session_state.messages.append({"role": "assistant", "content": response})
         st.rerun()
